@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SchoolLinks Table Converter</title>
+</head>
+<body>
+    <h1>SchoolLeaks</h1>
+    <h2>Guide</h2>
+    <ol>
+       <li>Navigate to Classlink, and login</li>
+       <li>Go to schoollinks, and make sure you are logged in</li>
+       <li>Go to this link: <a href="https://app.schoolinks.com/api/v1/sl_users/students/000000/k12-admins/" target="_blank">https://app.schoolinks.com/api/v1/sl_users/students/000000/k12-admins/</a></li>
+       <li>If possible, click raw data, and copy the entire contents of the page and paste it below
+    </ol>
+
+    <h2>Paste Data Here:</h2>
+    <textarea id="jsonInput" rows="10" cols="80"></textarea>
+    <br><br>
+    <button onclick="convertData()">Visualize</button>
+
+    <h2>Results:</h2>
+    <table id="resultTable" border="1" cellpadding="5" cellspacing="0" style="display: none;">
+        <thead>
+            <tr>
+                <th>Period</th>
+                <th>Class</th>
+                <th>Teacher</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+        </tbody>
+    </table>
+
+    <script>
+        function convertData() {
+            const rawJson = document.getElementById('jsonInput').value;
+            const tableBody = document.getElementById('tableBody');
+            const resultTable = document.getElementById('resultTable');
+
+            tableBody.innerHTML = '';
+
+            try {
+                const data = JSON.parse(rawJson);
+                let rowsData = [];
+
+                data.forEach(item => {
+                    const teacherName = `${item.user.first_name} ${item.user.last_name}`;
+
+                    item.caseloads.forEach(caseload => {
+                        const rawName = caseload.name;
+                        let className = rawName;
+                        let period = "N/A";
+
+                        const parts = rawName.split(' - ');
+
+                        if (parts.length >= 2) {
+                            className = parts[0].trim();
+                            period = parts[1].trim();
+                        } else if (parts.length === 1) {
+                            className = rawName;
+                        }
+
+                        let periodNum = Infinity;
+                        let periodSuffix = "";
+
+                        if (period !== "N/A") {
+                            const match = period.match(/^(\d+)(.*)$/);
+                            if (match) {
+                                periodNum = parseInt(match[1], 10);
+                                periodSuffix = match[2].trim().toLowerCase();
+                            }
+                        }
+
+                        rowsData.push({
+                            period: period,
+                            className: className,
+                            teacherName: teacherName,
+                            periodNum: periodNum,
+                            periodSuffix: periodSuffix
+                        });
+                    });
+                });
+
+                rowsData.sort((a, b) => {
+                    if (a.periodNum !== b.periodNum) {
+                        return a.periodNum - b.periodNum;
+                    }
+                    if (a.periodSuffix < b.periodSuffix) return -1;
+                    if (a.periodSuffix > b.periodSuffix) return 1;
+                    return 0;
+                });
+
+                resultTable.style.display = 'table';
+
+                rowsData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.period}</td>
+                        <td>${row.className}</td>
+                        <td>${row.teacherName}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+
+            } catch (error) {
+                alert("Invalid JSON data. Please check your input and try again.");
+                resultTable.style.display = 'none';
+            }
+        }
+    </script>
+
+</body>
+</html>
